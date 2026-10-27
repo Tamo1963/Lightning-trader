@@ -38,3 +38,8 @@ data:
   rolling_slots: {0: 1, 1: 2}   # our slot (0 near, 1 next) -> Dhan expiryCode [VERIFY on first fetch]
   strike_offsets: 3             # fetch ATM-3 .. ATM+3 for each side
   volume_proxy: options         # spot index has no volume; VWAP/VWMA weight by ATM+/-k option volume
+# Chronological split (spec section 7). The test period stays SEALED until all parameters are frozen.
+splits:
+  train:      {from: 2021-11-01, to: 2024-06-30}
+  validation: {from: 2024-07-01, to: 2025-09-30}
+  test:       {from: 2025-10-01, to: 2026-12-31}

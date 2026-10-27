@@ -61,6 +61,7 @@ class Params:
     block_expiry_day_entries: bool
     costs: dict
     data: dict
+    splits: dict
 
 
 def load_params(stage: str = "shadow_paper", config_dir: Path = CONFIG_DIR) -> Params:
@@ -88,5 +89,5 @@ def load_params(stage: str = "shadow_paper", config_dir: Path = CONFIG_DIR) -> P
         max_consecutive_losses=r["max_consecutive_losses_halt"],
         entry_start=_t(r["entry_window"]["start"]), entry_end=_t(r["entry_window"]["end"]),
         square_off=_t(r["square_off_time"]), block_expiry_day_entries=r["block_expiry_day_entries"],
-        costs=c, data=b["data"],
+        costs=c, data=b["data"], splits=b["splits"],
     )
