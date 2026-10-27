@@ -1,0 +1,23 @@
+# Placeholders [TUNE]. Freeze before the final test. Enforced in code, not by Jev.
+capital_inr: null            # required, set by owner
+risk_per_trade_pct: 0.5
+daily_loss_limit_pct: 2.0
+max_open_positions: 2
+max_entries_per_day: 3
+min_reward_risk: 2.0         # on option premium, after costs
+entry_window:
+  start: "09:30"
+  end: "14:30"
+square_off_time: "15:15"
+horizon_minutes: 30
+time_stop_minutes: 30
+max_spread_pct_of_premium: 3.0
+min_open_interest: null      # set per instrument from data
+min_volume: null
+data_max_age_seconds: 5
+reconcile_interval_seconds: 15
+block_expiry_day_entries: true
+jev:
+  timeout_seconds: 10
+  on_error: reject           # fail closed
+  min_repeat_agreement: 0.95

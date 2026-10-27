@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "JevDecisionResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request_id", "decision", "evidence_alignment", "reason_code", "model_version"],
+  "properties": {
+    "request_id": {"type": "string"},
+    "decision": {"enum": ["APPROVE", "REJECT", "INSUFFICIENT_EVIDENCE"]},
+    "evidence_alignment": {"enum": ["SUPPORTS_CANDIDATE", "CONTRADICTS_CANDIDATE", "MIXED"]},
+    "reason_code": {"enum": ["VALID_SETUP", "OVEREXTENDED", "POOR_LOCATION", "CONFLICTING_SIGNALS", "WEAK_CONFIRMATION", "REGIME_MISMATCH", "OTHER"]},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1, "description": "Uncalibrated. Never a win probability. Use only if the Jev API supplies it."},
+    "model_version": {"type": "string"}
+  }
+}
