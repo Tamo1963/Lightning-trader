@@ -1,0 +1,27 @@
+# Variant A (baseline) strategy parameters. [TUNE] items are fixed on validation data, then frozen.
+instrument: NIFTY
+lot_size: 65              # [VERIFY] refresh from the Dhan instrument master
+strike_step: 50
+expiry_weekday: 1         # 0=Mon .. 1=Tue [VERIFY current weekly expiry day]
+min_dte_days: 2           # [TUNE] skip contracts expiring sooner (gamma/theta)
+iv: 0.14                  # [TUNE] constant IV for modelled premiums (LOW FIDELITY, replace with real premiums)
+indicators:
+  rsi_period: 14
+  supertrend_period: 10
+  supertrend_mult: 3.0
+  vwma_period: 20
+  adx_period: 14
+  atr_period: 14
+signal:
+  monthly_rsi_threshold: 50
+  adx_min: 0              # 0 = off, so baseline A is exactly the stated rule set
+  post_roll_block_bars: 8
+barriers:
+  stop_pct: 0.30          # [TUNE] premium stop as fraction of entry
+  net_reward_risk: 2.0    # target solved so reward/risk >= this AFTER costs and slippage
+  max_target_pct: 1.0     # reject if target needs more than +100% premium
+  horizon_bars: 2         # 2 x 15 min = 30 min time stop
+  min_premium: 20
+execution:
+  slippage_pct: 0.01      # [TUNE] per side, fraction of premium
+  tick: 0.05

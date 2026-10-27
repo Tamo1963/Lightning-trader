@@ -1,1 +1,6 @@
 typesafe-sdk==0.7.5
+pandas>=2.2
+numpy>=1.26
+pyyaml>=6
+requests>=2.31
+pytest>=8
