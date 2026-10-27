@@ -94,3 +94,22 @@ def test_run_invariants_on_synthetic(feats, params):
     assert not any(cal.is_expiry(d) for d in trades["entry_ts"].dt.date)  # expiry-day block
     assert trades.groupby(trades["entry_ts"].dt.date).size().max() <= params.max_entries_per_day
     assert log["status"].isin(["TRADED"]).sum() == len(trades)
+
+
+def test_variant_switches_change_candidates(feats, params):
+    import dataclasses
+    from lightning.signals import generate
+    base = generate(feats, params)
+    none = generate(feats, dataclasses.replace(params, htf_filter="none"))
+    pb = generate(feats, dataclasses.replace(params, entry_mode="pullback", htf_filter="none"))
+    assert len(none) >= len(base)  # fewer filters, at least as many candidates
+    assert set(none["side"]) == {1, -1}
+    i = [feats.index.get_loc(t) for t in pb.index[pb.side == 1]]
+    assert (feats["low"].iloc[i] <= feats["vwap"].iloc[i]).all() and (feats["close"].iloc[i] > feats["vwap"].iloc[i]).all()
+
+
+def test_eod_horizon_exits_by_square_off(feats, params):
+    import dataclasses
+    trades, _ = run(feats, dataclasses.replace(params, horizon_bars=99))
+    assert (trades["exit_ts"].dt.time <= params.square_off).all()
+    assert trades["bars_held"].max() > params.horizon_bars

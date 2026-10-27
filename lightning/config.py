@@ -35,6 +35,8 @@ class Params:
     adx_period: int
     atr_period: int
     monthly_rsi_threshold: float
+    entry_mode: str
+    htf_filter: str
     adx_min: float
     post_roll_block_bars: int
     # barriers and execution
@@ -76,7 +78,7 @@ def load_params(stage: str = "shadow_paper", config_dir: Path = CONFIG_DIR) -> P
         rsi_period=ind["rsi_period"], supertrend_period=ind["supertrend_period"],
         supertrend_mult=ind["supertrend_mult"], vwma_period=ind["vwma_period"],
         adx_period=ind["adx_period"], atr_period=ind["atr_period"],
-        monthly_rsi_threshold=sig["monthly_rsi_threshold"], adx_min=sig["adx_min"],
+        monthly_rsi_threshold=sig["monthly_rsi_threshold"], entry_mode=sig["entry_mode"], htf_filter=sig["htf_filter"], adx_min=sig["adx_min"],
         post_roll_block_bars=sig["post_roll_block_bars"],
         stop_pct=bar["stop_pct"], net_reward_risk=bar["net_reward_risk"],
         max_target_pct=bar["max_target_pct"], horizon_bars=bar["horizon_bars"],

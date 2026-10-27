@@ -23,13 +23,15 @@ indicators:
   atr_period: 14
 signal:
   monthly_rsi_threshold: 50
+  entry_mode: edge        # edge | pullback
+  htf_filter: full        # full | no_monthly | none
   adx_min: 0              # 0 = off, so baseline A is exactly the stated rule set
   post_roll_block_bars: 8
 barriers:
   stop_pct: 0.30          # [TUNE] premium stop as fraction of entry
   net_reward_risk: 2.0    # target solved so reward/risk >= this AFTER costs and slippage
   max_target_pct: 1.0     # reject if target needs more than +100% premium
-  horizon_bars: 2         # 2 x 15 min = 30 min time stop
+  horizon_bars: 2         # 2 x 15 min = 30 min time stop; a large value (e.g. 99) = hold to square-off
   min_premium: 20
 execution:
   slippage_pct: 0.01      # [TUNE] per side, fraction of premium
