@@ -98,3 +98,36 @@ def attach_option_volume(spot: pd.DataFrame, opt: pd.DataFrame, slot: int = 0) -
     out = spot.copy()
     out["volume"] = v.reindex(out.index).fillna(0).to_numpy()
     return out
+
+
+def regular_sessions(df: pd.DataFrame, min_bars: int = 20) -> pd.Index:
+    """Dates of normal weekday sessions: first bar 09:15 and at least `min_bars` bars."""
+    day = df.index.normalize()
+    g = df.groupby(day)
+    first = g.apply(lambda x: x.index[0].strftime("%H:%M"))
+    n = g.size()
+    ok = (first == SESSION_START) & (n >= min_bars) & (first.index.weekday < 5)
+    return first.index[ok]
+
+
+def calendar_days(df: pd.DataFrame) -> list:
+    """Exchange trading days for the EXPIRY calendar: weekday sessions that start before noon. Excludes
+    Muhurat/evening special sessions (which happen on holidays), keeps days with a late-starting data gap."""
+    g = df.groupby(df.index.normalize())
+    first = g.apply(lambda x: x.index[0].time())
+    keep = [d.date() for d, t in first.items() if d.weekday() < 5 and t.hour < 12]
+    return keep
+
+
+def clean_intraday(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """Keep regular sessions and bars 09:15..15:15 (bar start); repair high/low that do not bracket open/close."""
+    out = df[df.index.strftime("%H:%M") < SESSION_END]
+    days = regular_sessions(out)
+    dropped_days = sorted(set(out.index.normalize()) - set(days))
+    out = out[out.index.normalize().isin(days)].copy()
+    hi, lo = out[["open", "high", "close"]].max(axis=1), out[["open", "low", "close"]].min(axis=1)
+    repaired = int(((hi != out["high"]) | (lo != out["low"])).sum())
+    out["high"], out["low"] = hi, lo
+    report = {"dropped_late_bars": int((df.index.strftime("%H:%M") >= SESSION_END).sum()),
+              "dropped_sessions": [d.date() for d in dropped_days], "repaired_ohlc": repaired}
+    return out, report

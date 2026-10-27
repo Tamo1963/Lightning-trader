@@ -78,3 +78,17 @@ def test_real_pricer_gap_mid_trade_exits_flagged(params):
     cal = ExpiryCalendar(pd.bdate_range("2026-11-02", "2026-11-20").date, params.expiry_schedule)
     t, _ = simulate_trade(spot, 0, +1, params.capital, params, RealPricer(spot, opt), cal)
     assert t["exit_reason"] == "DATA_GAP"
+
+
+def test_clean_intraday_drops_special_sessions_and_repairs():
+    from lightning.data.store import calendar_days, clean_intraday
+    reg = pd.date_range("2026-11-03 09:15", periods=25, freq="15min", tz=IST)
+    muhurat = pd.date_range("2026-11-08 18:00", periods=4, freq="15min", tz=IST)  # Sunday evening special
+    late = pd.DatetimeIndex([pd.Timestamp("2026-11-03 15:30", tz=IST)])
+    idx = reg.append(muhurat).append(late)
+    df = pd.DataFrame({"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 1}, index=idx)
+    df.iloc[3, df.columns.get_loc("high")] = 99.5  # high below open
+    out, rep = clean_intraday(df)
+    assert len(out) == 25 and rep["repaired_ohlc"] == 1 and rep["dropped_late_bars"] == 5  # 1 stray + 4 evening bars
+    assert (out["high"] >= out[["open", "close"]].max(axis=1)).all()
+    assert calendar_days(df) == [date(2026, 11, 3)]

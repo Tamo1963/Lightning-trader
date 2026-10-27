@@ -73,6 +73,8 @@ def main():
                 df = c.rolling_options(uid, resume_start(path, args.start), args.end, side, offset_label(off), code)
                 append(path, df)
                 print(f"options slot{slot} {tag} {offset_label(off)}: +{len(df)} rows")
+    for w in c.skipped:
+        print("skipped (DH-907 no data):", w)
 
 
 if __name__ == "__main__":

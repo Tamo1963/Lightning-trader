@@ -44,6 +44,7 @@ class DhanClient:
         self._headers = {"access-token": access_token, "Content-Type": "application/json", "Accept": "application/json"}
         self._s = session or requests.Session()
         self._pause = pause_s
+        self.skipped = []  # windows Dhan reported as having no data (DH-907)
 
     def _post(self, path: str, body: dict, retries: int = 4) -> dict:
         for attempt in range(retries + 1):
@@ -87,7 +88,12 @@ class DhanClient:
                     "instrument": instrument, "expiryFlag": expiry_flag, "expiryCode": int(expiry_code),
                     "strike": strike, "drvOptionType": side, "requiredData": ROLL_FIELDS,
                     "fromDate": cur.strftime("%Y-%m-%d"), "toDate": nxt.strftime("%Y-%m-%d")}
-            frames.append(parse_rolling(self._post("/charts/rollingoption", body), "ce" if side == "CALL" else "pe"))
+            try:
+                frames.append(parse_rolling(self._post("/charts/rollingoption", body), "ce" if side == "CALL" else "pe"))
+            except RuntimeError as e:
+                if "DH-907" not in str(e):  # DH-907 = no data for this window (e.g. no such expiry then): skip it
+                    raise
+                self.skipped.append((body["fromDate"], body["toDate"], strike, side, expiry_code))
             cur = nxt
             time.sleep(self._pause)
         df = pd.concat([x for x in frames if not x.empty]) if any(not x.empty for x in frames) else pd.DataFrame(columns=ROLL_FIELDS)

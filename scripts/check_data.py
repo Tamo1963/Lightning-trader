@@ -20,7 +20,13 @@ def main():
     print(f"spot_15m: {len(spot)} bars, {spot.index[0]} .. {spot.index[-1]}, {spot.index.normalize().nunique()} sessions")
     print(f"spot_daily: {len(daily)} days, {daily.index[0].date()} .. {daily.index[-1].date()}")
     for pr in store.validate_intraday(spot):
-        print("  spot WARNING:", pr)
+        print("  raw spot WARNING:", pr)
+    cal_days = store.calendar_days(spot)
+    spot, rep = store.clean_intraday(spot)
+    print(f"  cleaned: dropped {rep['dropped_late_bars']} bars at/after 15:30, {len(rep['dropped_sessions'])} special/partial "
+          f"sessions {rep['dropped_sessions']}, repaired {rep['repaired_ohlc']} OHLC rows")
+    for pr in store.validate_intraday(spot):
+        print("  clean spot WARNING:", pr)
 
     opt = store.load_options(d)
     if opt.empty:
@@ -37,15 +43,14 @@ def main():
     # strike vs spot sanity
     gap = (near_atm["strike"] - near_atm["spot"]).abs()
     print(f"|ATM strike - spot|: median {gap.median():.1f}, 99th pct {gap.quantile(.99):.1f} (strike step {p.strike_step})")
-    # calendar check: near-contract last close should be ~intrinsic on expiry days
-    cal = ExpiryCalendar(spot.index.date, p.expiry_schedule)
-    last = near_atm[near_atm.side == "CE"].groupby(near_atm["ts"].dt.date)["close"].last()
-    tiny_days = set(last[last <= 1.0].index)
-    exp_days = {e for e in cal.expiries if spot.index[0].date() <= e <= spot.index[-1].date()}
-    print(f"calendar expiries in range: {len(exp_days)}; days where near ATM call closed <= 1: {len(tiny_days)}")
-    print(f"  tiny-close days not in calendar: {sorted(tiny_days - exp_days)[:15]}")
-    print(f"  calendar expiries without tiny close: {sorted(exp_days - tiny_days)[:15]}")
-
+    # calendar check: at 14:00 the near-expiry ATM straddle collapses on expiry day
+    cal = ExpiryCalendar(cal_days, p.expiry_schedule)
+    a14 = near_atm[near_atm["ts"].dt.strftime("%H:%M") == "14:00"]
+    st = a14.groupby([a14["ts"].dt.date, "side"])["close"].last().unstack().sum(axis=1)
+    is_exp = st.index.map(lambda x: cal.is_expiry(x))
+    print(f"14:00 ATM straddle median: calendar expiry days {st[is_exp].median():.1f}, other days {st[~is_exp].median():.1f}")
+    print(f"  non-expiry days with straddle < 25% of normal (possible missed expiry): "
+          f"{sorted(st[~is_exp & (st < 0.25 * st[~is_exp].median())].index)}")
 
 if __name__ == "__main__":
     main()
