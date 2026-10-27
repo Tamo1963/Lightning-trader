@@ -1,0 +1,28 @@
+# Stock study universe (pre-registered). Current large-cap Nifty 50 F&O names: SURVIVORSHIP BIAS (today's winners).
+# security_id: NSE EQUITY id from the Dhan scrip master; lot: current OPTSTK lot (historical changes ignored; results in R).
+stocks:
+  RELIANCE:   {security_id: 2885,  lot: 500,  strike_step: 10}
+  HDFCBANK:   {security_id: 1333,  lot: 650,  strike_step: 10}
+  ICICIBANK:  {security_id: 4963,  lot: 700,  strike_step: 10}
+  INFY:       {security_id: 1594,  lot: 400,  strike_step: 20}
+  TCS:        {security_id: 11536, lot: 225,  strike_step: 20}
+  SBIN:       {security_id: 3045,  lot: 750,  strike_step: 5}
+  AXISBANK:   {security_id: 5900,  lot: 625,  strike_step: 10}
+  KOTAKBANK:  {security_id: 1922,  lot: 2000, strike_step: 20}
+  LT:         {security_id: 11483, lot: 175,  strike_step: 20}
+  BHARTIARTL: {security_id: 10604, lot: 475,  strike_step: 20}
+  ITC:        {security_id: 1660,  lot: 1725, strike_step: 5}
+  BAJFINANCE: {security_id: 317,   lot: 750,  strike_step: 10}
+  MARUTI:     {security_id: 10999, lot: 50,   strike_step: 100}
+  SUNPHARMA:  {security_id: 3351,  lot: 350,  strike_step: 20}
+  HINDUNILVR: {security_id: 1394,  lot: 300,  strike_step: 20}
+  M&M:        {security_id: 2031,  lot: 200,  strike_step: 50}
+  TITAN:      {security_id: 3506,  lot: 175,  strike_step: 20}
+  ULTRACEMCO: {security_id: 11532, lot: 50,   strike_step: 100}
+  NTPC:       {security_id: 11630, lot: 1500, strike_step: 5}
+  TATASTEEL:  {security_id: 3499,  lot: 2750, strike_step: 2.5}
+splits:  # daily families use the longer daily history for train; intraday and option data start 2021-11
+  train_daily: {from: 2016-01-01, to: 2024-06-30}
+  train:       {from: 2021-11-01, to: 2024-06-30}
+  validation:  {from: 2024-07-01, to: 2025-09-30}
+  test:        {from: 2025-10-01, to: 2026-12-31}
