@@ -159,3 +159,13 @@ def test_regular_bars_drops_post_close_placeholders():
                             "2026-10-31 10:00"]).tz_localize("Asia/Kolkata")  # last one is a Saturday
     df = pd.DataFrame({"close": 1.0}, index=idx)
     assert regular_bars(df).index.strftime("%H:%M").tolist() == ["09:15", "15:15"]
+
+
+def test_api_key_name_fallback(monkeypatch):
+    from lightning.live.jev import api_key
+    monkeypatch.delenv("JEV_API_KEY", raising=False); monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    assert api_key() is None
+    monkeypatch.setenv("TYPESAFE_API_KEY", " k2 ")
+    assert api_key() == "k2"
+    monkeypatch.setenv("JEV_API_KEY", "k1")
+    assert api_key() == "k1"

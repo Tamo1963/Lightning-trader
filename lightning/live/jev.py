@@ -127,16 +127,22 @@ def decide(agg: dict, side: int, rule: dict) -> tuple[str, str]:
     return "APPROVE", "OK"
 
 
+def api_key() -> str | None:
+    """JEV_API_KEY, or the SDK's own TYPESAFE_API_KEY. Passed to the client explicitly; never logged."""
+    return (os.environ.get("JEV_API_KEY") or os.environ.get("TYPESAFE_API_KEY") or "").strip() or None
+
+
 class JevGate:
     """client: object with async `system_one(state=..., questions=...)`; built from typesafe-sdk when not given."""
 
     def __init__(self, cfg: dict, client=None):
         self.cfg, self.client = cfg, client
         self.questions, self.groups = rotated_questions()
-        if self.client is None and cfg.get("enabled") and os.environ.get("JEV_API_KEY"):
+        key = api_key()
+        if self.client is None and cfg.get("enabled") and key:
             try:
                 from typesafe_sdk import AsyncTypeSafeClient, RetryPolicy  # optional dependency
-                self.client = AsyncTypeSafeClient(model=cfg["model"], timeout=cfg["timeout_seconds"],
+                self.client = AsyncTypeSafeClient(api_key=key, model=cfg["model"], timeout=cfg["timeout_seconds"],
                                                   retry=RetryPolicy(max_retries=cfg["max_retries"]))
             except Exception as e:  # noqa: BLE001 - any SDK problem means fail closed
                 self.init_error = str(e)

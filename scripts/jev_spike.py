@@ -48,9 +48,10 @@ def dump(obj):
 
 
 async def main():
-    if not os.environ.get("JEV_API_KEY"):
-        sys.exit("JEV_API_KEY not set")
-    client = AsyncTypeSafeClient(model=MODEL, timeout=5.0, retry=RetryPolicy(max_retries=1))
+    key = (os.environ.get("JEV_API_KEY") or os.environ.get("TYPESAFE_API_KEY") or "").strip()
+    if not key:
+        sys.exit("set JEV_API_KEY (or TYPESAFE_API_KEY)")
+    client = AsyncTypeSafeClient(api_key=key, model=MODEL, timeout=5.0, retry=RetryPolicy(max_retries=1))
     out_dir = Path("data/raw"); out_dir.mkdir(parents=True, exist_ok=True)
     questions = build_questions()
     results = []
