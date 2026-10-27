@@ -70,3 +70,31 @@ def stitch_contracts(frames: list[tuple[pd.Timestamp, pd.DataFrame]], roll_days_
         parts.append(seg)
         prev_end = cut
     return pd.concat(parts) if parts else pd.DataFrame()
+
+
+def offset_label(k: int) -> str:
+    return "ATM" if k == 0 else f"ATM{k:+d}"
+
+
+def load_options(data_dir: Path) -> pd.DataFrame:
+    """Concatenate data_dir/options/slot{S}_{CE|PE}_{offset}.csv into one long table."""
+    parts = []
+    for path in sorted((data_dir / "options").glob("slot*_*_*.csv")):
+        slot, side, off = path.stem.split("_")
+        df = pd.read_csv(path, parse_dates=["ts"])
+        if df.empty:
+            continue
+        df["ts"] = pd.DatetimeIndex(df["ts"]).tz_convert(IST) if pd.DatetimeIndex(df["ts"]).tz is not None \
+            else pd.DatetimeIndex(df["ts"]).tz_localize(IST)
+        df["slot"], df["side"], df["offset"] = int(slot[4:]), side, int(off)
+        parts.append(df)
+    return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
+
+
+def attach_option_volume(spot: pd.DataFrame, opt: pd.DataFrame, slot: int = 0) -> pd.DataFrame:
+    """Spot index has no volume: use total near-expiry option volume (all fetched strikes, CE+PE) per bar
+    as the participation weight for VWAP/VWMA. The live system must use the same proxy."""
+    v = opt[opt["slot"] == slot].groupby("ts")["volume"].sum()
+    out = spot.copy()
+    out["volume"] = v.reindex(out.index).fillna(0).to_numpy()
+    return out

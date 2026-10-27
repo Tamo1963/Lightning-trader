@@ -1,4 +1,4 @@
-"""Baseline (variant A) backtest: candidates -> modelled option premium -> triple-barrier exit -> risk limits.
+"""Baseline (variant A) backtest: candidates -> option premium (real Dhan data or model) -> triple-barrier exit -> risk limits.
 
 Timing: decision at bar close, entry at the NEXT bar open, one position at a time per instrument.
 If stop and target are both touched inside one bar, the stop is assumed to hit first (conservative).
@@ -11,7 +11,8 @@ import pandas as pd
 
 from .config import Params
 from .costs import round_trip_costs
-from .options import atm_strike, bs_price, is_expiry_day, pick_expiry, years_to
+from .calendar import ExpiryCalendar, lot_size_on
+from .pricing import ModelPricer
 from .signals import BAR, generate
 
 
@@ -23,27 +24,26 @@ def _floor(x: float, tick: float) -> float:
     return round(math.floor(x / tick + 1e-9) * tick, 2)
 
 
-def simulate_trade(f: pd.DataFrame, i: int, side: int, equity: float, p: Params):
+def simulate_trade(f: pd.DataFrame, i: int, side: int, equity: float, p: Params, pricer, cal: ExpiryCalendar):
     """Returns (trade dict, None) or (None, reject_reason). `i` is the decision bar; entry is bar i+1."""
     idx, e = f.index, i + 1
-    is_call = side == 1
-    entry_ts = idx[e]
-    expiry = pick_expiry(entry_ts.date(), p.expiry_weekday, p.min_dte_days)
-    strike = atm_strike(f["close"].iat[i], p.strike_step)
-
-    def prem(F: float, ts: pd.Timestamp) -> float:
-        return bs_price(F, strike, years_to(expiry, ts), p.iv, is_call)
-
-    entry = _ceil(prem(f["open"].iat[e], entry_ts) * (1 + p.slippage_pct), p.tick)
+    d = idx[e].date()
+    slot, expiry = cal.choose(d, p.min_dte_days)
+    c = pricer.select(i, side, slot, expiry)
+    first = pricer.bar(c, e) if c is not None else None
+    if first is None:
+        return None, "NO_OPTION_DATA"
+    lot = lot_size_on(p.lot_schedule, d)
+    entry = _ceil(first[0] * (1 + p.slippage_pct), p.tick)
     if entry < p.min_premium:
         return None, "PREMIUM_FLOOR"
     stop = _floor(entry * (1 - p.stop_pct), p.tick)
     risk_u = entry - stop
-    lots = math.floor(equity * p.risk_pct / 100 / (p.lot_size * risk_u))
-    lots = min(lots, math.floor(equity * p.max_premium_outlay_pct / 100 / (p.lot_size * entry)))
+    lots = math.floor(equity * p.risk_pct / 100 / (lot * risk_u))
+    lots = min(lots, math.floor(equity * p.max_premium_outlay_pct / 100 / (lot * entry)))
     if lots < 1:
         return None, "LOTS_LT_1"
-    qty = lots * p.lot_size
+    qty = lots * lot
     c_u = round_trip_costs(qty, entry, entry, p.costs) / qty + p.slippage_pct * entry
     reward_u = p.net_reward_risk * (risk_u + c_u) + c_u
     if reward_u > entry * p.max_target_pct:
@@ -51,41 +51,47 @@ def simulate_trade(f: pd.DataFrame, i: int, side: int, equity: float, p: Params)
     target = _ceil(entry + reward_u, p.tick)
 
     last = min(e + p.horizon_bars, len(idx)) - 1
+    prev_close = first[0]
     for j in range(e, last + 1):
         end = idx[j] + BAR
-        hi, lo = f["high"].iat[j], f["low"].iat[j]
-        po = prem(f["open"].iat[j], idx[j])
-        ph, pl = (prem(hi, end), prem(lo, end)) if is_call else (prem(lo, end), prem(hi, end))
-        pc = prem(f["close"].iat[j], end)
+        b = first if j == e else pricer.bar(c, j)
         forced = (j == last) or end.time() >= p.square_off or idx[j + 1].date() != idx[j].date()
-        if j > e and po <= stop:
-            px, reason = po, "STOP_GAP"
-        elif j > e and po >= target:
-            px, reason = po, "TARGET_GAP"
-        elif pl <= stop:
-            px, reason = stop, "STOP"
-        elif ph >= target:
-            px, reason = target, "TARGET"
-        elif forced:
-            px, reason = pc, "TIME"
+        if b is None:  # data gap mid-trade: exit at the last known price, flagged
+            px, reason = prev_close, "DATA_GAP"
         else:
-            continue
+            po, ph, pl, pc = b
+            prev_close = pc
+            if j > e and po <= stop:
+                px, reason = po, "STOP_GAP"
+            elif j > e and po >= target:
+                px, reason = po, "TARGET_GAP"
+            elif pl <= stop:
+                px, reason = stop, "STOP"
+            elif ph >= target:
+                px, reason = target, "TARGET"
+            elif forced:
+                px, reason = pc, "TIME"
+            else:
+                continue
         sell = _floor(px * (1 - p.slippage_pct), p.tick)
         gross = (sell - entry) * qty
         costs = round_trip_costs(qty, entry, sell, p.costs)
         net = gross - costs
         risk_inr = risk_u * qty
         return {
-            "entry_ts": entry_ts, "exit_ts": end, "exit_idx": j, "side": side, "strike": strike,
-            "expiry": expiry, "lots": lots, "qty": qty, "entry": entry, "stop": stop, "target": target,
-            "exit_fill": sell, "exit_reason": reason, "gross": gross, "costs": costs, "net": net,
-            "risk_inr": risk_inr, "net_r": net / risk_inr, "bars_held": j - e + 1,
+            "entry_ts": idx[e], "exit_ts": end, "exit_idx": j, "side": side, "strike": c.strike,
+            "expiry": expiry, "pricer": pricer.name, "lots": lots, "qty": qty, "entry": entry, "stop": stop,
+            "target": target, "exit_fill": sell, "exit_reason": reason, "gross": gross, "costs": costs,
+            "net": net, "risk_inr": risk_inr, "net_r": net / risk_inr, "bars_held": j - e + 1,
         }, None
     return None, "NO_EXIT"  # unreachable: the last bar is always forced
 
 
-def run(f: pd.DataFrame, p: Params):
-    """Returns (trades, candidate_log). Every candidate is logged with TRADED or its rejection reason."""
+def run(f: pd.DataFrame, p: Params, pricer=None, cal: ExpiryCalendar | None = None):
+    """Returns (trades, candidate_log). Every candidate is logged with TRADED or its rejection reason.
+    Defaults: modelled premiums and an expiry calendar built from the data's own trading days."""
+    pricer = pricer or ModelPricer(f, p.strike_step, p.iv)
+    cal = cal or ExpiryCalendar(f.index.date, p.expiry_schedule)
     cands = generate(f, p)
     pos = {ts: k for k, ts in enumerate(f.index)}
     equity = peak = p.capital
@@ -113,7 +119,7 @@ def run(f: pd.DataFrame, p: Params):
             reason = "POSITION_OPEN"
         elif halted:
             reason = "DRAWDOWN_HALT"
-        elif p.block_expiry_day_entries and is_expiry_day(d, p.expiry_weekday):
+        elif p.block_expiry_day_entries and cal.is_expiry(d):
             reason = "EXPIRY_DAY"
         elif day_entries >= p.max_entries_per_day:
             reason = "MAX_ENTRIES_DAY"
@@ -124,7 +130,7 @@ def run(f: pd.DataFrame, p: Params):
         elif consec >= p.max_consecutive_losses:
             reason = "CONSEC_LOSS_PAUSE"
         else:
-            t, reason = simulate_trade(f, i, side, equity, p)
+            t, reason = simulate_trade(f, i, side, equity, p, pricer, cal)
             if t is not None:
                 reason = "TRADED"
                 trades.append(t)

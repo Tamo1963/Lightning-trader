@@ -2,4 +2,4 @@
 *.key
 __pycache__/
 *.sqlite
-data/raw/
+data/

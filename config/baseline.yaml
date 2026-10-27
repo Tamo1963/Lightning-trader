@@ -1,10 +1,19 @@
 # Variant A (baseline) strategy parameters. [TUNE] items are fixed on validation data, then frozen.
 instrument: NIFTY
-lot_size: 65              # [VERIFY] refresh from the Dhan instrument master
+underlying_security_id: 13   # Nifty 50 index (Dhan scrip master, IDX_I)
 strike_step: 50
-expiry_weekday: 1         # 0=Mon .. 1=Tue [VERIFY current weekly expiry day]
+# Lot size in force by date. 65 confirmed in the Dhan scrip master (Oct 2026); earlier rows [VERIFY].
+lot_schedule:
+  - {from: 2000-01-01, lot: 50}
+  - {from: 2024-11-20, lot: 75}
+  - {from: 2025-12-31, lot: 65}
+# Weekly expiry weekday by date (0=Mon). Tuesday confirmed in the scrip master; Thursday era [VERIFY].
+# A holiday moves expiry to the previous trading day (taken from the data).
+expiry_schedule:
+  - {from: 2019-01-01, weekday: 3}
+  - {from: 2025-09-01, weekday: 1}
 min_dte_days: 2           # [TUNE] skip contracts expiring sooner (gamma/theta)
-iv: 0.14                  # [TUNE] constant IV for modelled premiums (LOW FIDELITY, replace with real premiums)
+iv: 0.14                  # ModelPricer only (fallback/tests). Real backtests use Dhan expired-options prices.
 indicators:
   rsi_period: 14
   supertrend_period: 10
@@ -25,3 +34,7 @@ barriers:
 execution:
   slippage_pct: 0.01      # [TUNE] per side, fraction of premium
   tick: 0.05
+data:
+  rolling_slots: {0: 1, 1: 2}   # our slot (0 near, 1 next) -> Dhan expiryCode [VERIFY on first fetch]
+  strike_offsets: 3             # fetch ATM-3 .. ATM+3 for each side
+  volume_proxy: options         # spot index has no volume; VWAP/VWMA weight by ATM+/-k option volume

@@ -21,9 +21,10 @@ def _t(s: str) -> time:
 @dataclass(frozen=True)
 class Params:
     # instrument and contract
-    lot_size: int
+    underlying_security_id: int
+    lot_schedule: list
     strike_step: int
-    expiry_weekday: int
+    expiry_schedule: list
     min_dte_days: int
     iv: float
     # indicators and signal
@@ -59,6 +60,7 @@ class Params:
     square_off: time
     block_expiry_day_entries: bool
     costs: dict
+    data: dict
 
 
 def load_params(stage: str = "shadow_paper", config_dir: Path = CONFIG_DIR) -> Params:
@@ -68,7 +70,7 @@ def load_params(stage: str = "shadow_paper", config_dir: Path = CONFIG_DIR) -> P
     if risk_pct > r["risk_per_trade_hard_cap_pct"]:
         raise ValueError("ladder stage exceeds the hard risk cap")
     return Params(
-        lot_size=b["lot_size"], strike_step=b["strike_step"], expiry_weekday=b["expiry_weekday"],
+        underlying_security_id=b["underlying_security_id"], lot_schedule=b["lot_schedule"], strike_step=b["strike_step"], expiry_schedule=b["expiry_schedule"],
         min_dte_days=b["min_dte_days"], iv=b["iv"],
         rsi_period=ind["rsi_period"], supertrend_period=ind["supertrend_period"],
         supertrend_mult=ind["supertrend_mult"], vwma_period=ind["vwma_period"],
@@ -86,5 +88,5 @@ def load_params(stage: str = "shadow_paper", config_dir: Path = CONFIG_DIR) -> P
         max_consecutive_losses=r["max_consecutive_losses_halt"],
         entry_start=_t(r["entry_window"]["start"]), entry_end=_t(r["entry_window"]["end"]),
         square_off=_t(r["square_off_time"]), block_expiry_day_entries=r["block_expiry_day_entries"],
-        costs=c,
+        costs=c, data=b["data"],
     )

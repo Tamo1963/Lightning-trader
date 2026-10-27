@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from lightning.backtest import simulate_trade, run
+from lightning.backtest import run, simulate_trade as _sim
+from lightning.calendar import ExpiryCalendar
+from lightning.pricing import ModelPricer
 from lightning.config import load_params
 from lightning.signals import BAR
 
@@ -20,6 +22,10 @@ def path_frame(closes, start="2026-10-27 09:15"):  # Tuesday=expiry weekday; tes
 @pytest.fixture
 def p():
     return load_params()
+
+
+def simulate_trade(f, i, side, equity, p):
+    return _sim(f, i, side, equity, p, ModelPricer(f, p.strike_step, p.iv), ExpiryCalendar(f.index.date, p.expiry_schedule))
 
 
 def test_call_target_hit_on_big_up_move(p):
@@ -84,6 +90,7 @@ def test_run_invariants_on_synthetic(feats, params):
     t_ = trades["entry_ts"].dt
     assert (t_.time >= params.entry_start).all()
     assert (trades["risk_inr"] <= params.capital * params.risk_hard_cap_pct / 100 * 1.5).all()
-    assert (trades["entry_ts"].dt.weekday != params.expiry_weekday).all()  # expiry-day block
+    cal = ExpiryCalendar(feats.index.date, params.expiry_schedule)
+    assert not any(cal.is_expiry(d) for d in trades["entry_ts"].dt.date)  # expiry-day block
     assert trades.groupby(trades["entry_ts"].dt.date).size().max() <= params.max_entries_per_day
     assert log["status"].isin(["TRADED"]).sum() == len(trades)

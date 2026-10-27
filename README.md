@@ -16,14 +16,21 @@ Status: **foundation spec (v0.1, draft)**. Nothing here trades yet.
 
 ```
 pip install -r requirements.txt
-python -m pytest -q                         # 22 tests, including look-ahead and mutation-checked leak tests
-python scripts/run_baseline.py --synthetic  # plumbing check on FAKE data
-python scripts/fetch_dhan.py ...            # real data (DHAN_ACCESS_TOKEN env var), then run_baseline.py --fut ... --daily ...
+python -m pytest -q                                    # 30 tests (look-ahead, pricing, calendars, Dhan client)
+export DHAN_ACCESS_TOKEN=...                           # environment only; never commit or print
+python scripts/fetch_history.py --start 2021-11-01 --end 2026-10-27   # resumable; writes data/NIFTY/
+python scripts/run_baseline.py --data-dir data/NIFTY   # real expired-option premiums
+python scripts/run_baseline.py --synthetic             # plumbing check on FAKE data
 ```
 
-- `lightning/indicators.py`, `features.py`, `signals.py`: causal indicators, completed-period higher-timeframe RSI, baseline G1/G2
-- `lightning/options.py`, `costs.py`, `backtest.py`, `metrics.py`: modelled premiums, charges, triple-barrier simulator, risk limits, day-clustered bootstrap
-- `lightning/data/`: Dhan client, CSV store with validation, contract stitching, synthetic generator (tests only)
+Data (all from DhanHQ, Nifty 50 = security ID 13):
+- `spot_daily.csv` (monthly/weekly RSI), `spot_15m.csv` (signals; 5 years available)
+- `options/`: rolling expired options, near and next weekly expiry, ATM-3..ATM+3, calls and puts, 15-min OHLC + IV, OI, volume, spot
+- Expired futures intraday is not available, so VWAP/VWMA are weighted by option volume (same proxy must be used live).
 
-Known limits: premiums are modelled (constant IV, no spread) until real option history is wired in; weekly-expiry
-calendar ignores holidays; futures contracts must be fetched and stitched per expiry.
+Modules: `indicators`, `features`, `signals` (G1/G2), `calendar` (expiry and lot-size history, holiday shifts),
+`pricing` (RealPricer from Dhan data, ModelPricer fallback), `costs`, `backtest` (triple barrier, risk limits),
+`metrics` (day-clustered bootstrap), `data/` (Dhan client, store, synthetic data for tests only).
+
+Still [VERIFY] on first fetch: which Dhan `expiryCode` is the near weekly contract (config `data.rolling_slots`),
+pre-2025 expiry weekday and lot sizes, and the charges in `config/costs.yaml`.
