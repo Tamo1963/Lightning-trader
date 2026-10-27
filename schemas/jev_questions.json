@@ -1,0 +1,31 @@
+{
+  "_comment": "Jev question set for G4. Provisional: confirm exact request/response field names in the Phase 0 spike. State must contain LABELS (words), never raw numbers, and no free text.",
+  "version": "q-0.1",
+  "rotate_option_orders": true,
+  "average_over_rotations": true,
+  "questions": {
+    "direction": {
+      "type": "choice",
+      "instructions": "Using only `state`, which position has the better expected result over the next 30 minutes after trading costs?",
+      "criteria": {
+        "call_favorable": "Index is more likely to rise far enough to pay option costs than to fall to the stop.",
+        "put_favorable": "Index is more likely to fall far enough to pay option costs than to rise to the stop.",
+        "stand_aside": "Expected move is too small, too uncertain, or signals conflict."
+      }
+    },
+    "entry_quality": {
+      "type": "choice",
+      "instructions": "If the position proposed in `state.candidate` is opened now, how good is the entry location?",
+      "criteria": {
+        "good_entry": "Trend or breakout is intact and price is not stretched from value.",
+        "extended": "Price is stretched from value; the move looks already done.",
+        "poor_location": "Entry is directly into resistance (call) or support (put).",
+        "unclear": "Evidence is insufficient to judge."
+      }
+    },
+    "thesis_supported": {
+      "type": "noul",
+      "instructions": "If the position proposed in `state.candidate` is opened, do trend, momentum, participation and derivatives context all support it?"
+    }
+  }
+}

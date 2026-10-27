@@ -28,12 +28,12 @@ effectively constant over the test window; then it adds nothing and should be dr
 | G1 Tradability | Code | Data fresh and complete? Regime ok (ADX, ATR bounds)? No event flag? Inside time window? Not expiry-day gamma? | PASS / FAIL + reason |
 | G2 Candidate | Code | Do the baseline rules fire? CALL: monthly RSI>50, weekly RSI change>0, 15m close > VWAP, VWMA, SuperTrend. PUT: mirror. | BUY_CALL / BUY_PUT / NONE |
 | G3 Statistical | Code | Calibrated P(favorable premium outcome) above threshold, and above the opposite side? | PASS / FAIL + probabilities |
-| G4 Jev | Jev | Is the evidence coherent and the setup valid under the stated policy? | APPROVE / REJECT / INSUFFICIENT_EVIDENCE |
+| G4 Jev | Jev (typed questions) | Direction match, entry quality, thesis support, averaged over option orders | APPROVE / REJECT (fail closed) |
 | G5 Risk | Code | Reward/risk, costs, size, spread, liquidity, exposure, daily loss, duplicates | APPROVE / REJECT + reason |
 
 Rules:
 - Jev timeout, error, invalid schema or low-quality response = REJECT (fail closed).
-- Jev's `evidence_alignment` is a classification of supplied evidence, not a price forecast.
+- Jev is used as a bounded classifier of supplied labelled evidence; its output is never an order, a size or a stop.
 - Jev confidence is **not** a win probability and is never used in sizing or EV.
 - G3 probability is shown to Jev only in variant `A+S+J` (see section 7); in `A+J` Jev is blind to it.
 - G3 and G4 disagreement: NO TRADE.
@@ -49,20 +49,26 @@ Extension: (close - VWAP) / ATR. Keep the set small; every added feature raises 
 Data freshness: last tick age <= 5 s [TUNE]; candle must be closed; no gaps in the last N bars.
 Event calendar: maintained file (RBI, Budget, major data, expiry); a flag, not an LLM judgement.
 
-## 4. Jev contract
+## 4. Jev contract (revised after reading TypeSafe/AIML docs and a live-trading write-up)
 
-Typed request/response, validated against `schemas/*.json`. Temperature 0 (or lowest supported),
-model version pinned and recorded. No credentials, account IDs or personal data are sent.
-Dates, tickers and absolute price levels are omitted in replay mode to reduce training-data leakage.
+Jev is **not an LLM**. It is a "System One" decision model: input is a `state` (string/JSON) plus typed
+questions (`choice`, `score`, `noul`); output is a chosen option, a probability per option and a
+confidence. There is no prose, no reasoning and no reason codes. Consequences:
 
-Request: instrument, strategy id and version, horizon, candidate, normalized features, setup type,
-data-quality and event flags, policy text id, optionally the statistical probabilities (variant S+J only).
-Response: decision (`APPROVE | REJECT | INSUFFICIENT_EVIDENCE`), `evidence_alignment`, `reason_code`,
-optional confidence 0-1 (uncalibrated), `model_version`.
+- No policy text or rubric prompt. Each option carries a short `criteria` definition (`schemas/jev_questions.json`).
+- State contains **labels, not raw numbers** (e.g. "RSI: strong", "price: stretched above value"), no dates, tickers, absolute levels or free text.
+- Every choice question is sent in **all cyclic option orders** and averaged; the rotation spread is logged (option order alone moved ~26% of answers by >=0.10 in one independent test).
+- Every question includes an abstain option (`stand_aside`, `unclear`).
+- Model pinned (`jev-1.13.0`), question and state-builder hash stored on every call.
+- **Confidence is not used for sizing or as a win probability.** In an independent crypto test, calls at >=0.95 were right less often than calls <0.70. Jev outputs are inputs to a rule fitted on validation data and frozen; its raw confidence is never trusted.
+- Jev agreed with the LLM it was compared with on 112/117 calls (it echoes what is in the state). Therefore the state must include information the baseline rules do not already encode (derivatives, breadth, structure, time-of-day), and the ablation must show the approve rate is not ~100%.
+- Jev is **never used for exits or position management** (in that test it answered "hold" every time).
 
-Pre-deployment Jev tests (Phase 4): repeat-call agreement >= 95% on identical input; mirror test
-(flip bullish and bearish inputs) shows approve-rate asymmetry within +/-10 points [TUNE]; no change in
-decision from irrelevant prompt perturbations beyond tolerance.
+G4 rule (draft [TUNE]): APPROVE iff averaged `direction` matches the candidate side, `stand_aside` probability is below a
+threshold, `entry_quality` = `good_entry` wins, and `thesis_supported` is above a threshold; thresholds fitted on validation, then frozen.
+Any error, timeout, or high rotation spread: REJECT.
+
+Provisional: exact response field names are confirmed in the Phase 0 spike.
 
 ## 5. Deterministic risk and execution rules (G5)
 
@@ -141,7 +147,6 @@ trade count, avoided losers, missed winners, approve rate by direction.
 
 ## 10. Open questions for the owner
 
-- Capital and per-trade risk budget (drives whether 1 lot fits).
-- Which Jev product/API exactly, and what fields it truly returns.
+- Direct TypeSafe or AI/ML API gateway for the key you hold (Phase 0).
 - Is the monthly-RSI bias worth keeping if it is constant across the test window?
 - Preferred time window and expiry handling (avoid expiry day, or trade it separately?).

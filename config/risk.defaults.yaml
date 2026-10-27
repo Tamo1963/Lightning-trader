@@ -1,23 +1,36 @@
-# Placeholders [TUNE]. Freeze before the final test. Enforced in code, not by Jev.
-capital_inr: null            # required, set by owner
-risk_per_trade_pct: 0.5
-daily_loss_limit_pct: 2.0
+# Hard limits, enforced in code (G5), never by Jev. [TUNE] values are frozen before the final test.
+capital_inr: 1000000
+risk_per_trade_hard_cap_pct: 2.0      # absolute ceiling = INR 20,000 at current capital
+risk_ladder_pct:                      # working risk per trade by stage; advance only on stage exit criteria
+  shadow_paper: 1.0                   # simulated, sized as if live at 1%
+  pilot_1: 0.5                        # first 100 live trades
+  pilot_2: 1.0                        # after pilot_1 criteria pass
+  full: 2.0                           # only after pilot_2 criteria pass; never exceeds hard cap
+max_premium_outlay_pct: 10.0          # capital committed to one position's premium
+daily_loss_limit_pct: 3.0             # must be >= 1.5x working risk so one stop does not end the day
+weekly_loss_limit_pct: 6.0
+drawdown_halt_pct: 10.0               # from peak equity; halts all entries until manual review
 max_open_positions: 2
 max_entries_per_day: 3
-min_reward_risk: 2.0         # on option premium, after costs
-entry_window:
-  start: "09:30"
-  end: "14:30"
+max_consecutive_losses_halt: 5        # [TUNE] pause entries, require manual review
+min_reward_risk: 2.0                  # on option premium, after costs
+entry_window: {start: "09:30", end: "14:30"}
 square_off_time: "15:15"
-horizon_minutes: 30
+horizon_minutes: 30                   # [TUNE]
 time_stop_minutes: 30
-max_spread_pct_of_premium: 3.0
-min_open_interest: null      # set per instrument from data
+max_spread_pct_of_premium: 3.0        # [TUNE]
+min_open_interest: null
 min_volume: null
 data_max_age_seconds: 5
 reconcile_interval_seconds: 15
 block_expiry_day_entries: true
+instruments:                          # [VERIFY] refresh from the Dhan instrument master daily
+  NIFTY:     {lot_size: 65}
+  BANKNIFTY: {lot_size: 30}
 jev:
-  timeout_seconds: 10
-  on_error: reject           # fail closed
+  model: "jev-1.13.0"                 # pinned; re-validate before moving to 1.14.x
+  timeout_seconds: 5
+  max_retries: 1
+  on_error: reject                    # fail closed
   min_repeat_agreement: 0.95
+  rotations: 3                        # per choice question, averaged in code
