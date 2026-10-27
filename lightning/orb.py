@@ -13,19 +13,22 @@ LAST_DECISION = time(13, 0)
 
 
 def day_filters(f: pd.DataFrame, daily: pd.DataFrame, opt: pd.DataFrame | None) -> pd.DataFrame:
-    """Per session date: `compression` and `low_iv` flags, computed from PRIOR sessions only."""
+    """Per session date: `compression`, `low_iv` and `iv_high` flags, computed from PRIOR sessions only."""
     days = pd.DatetimeIndex(sorted(set(f.index.tz_localize(None).normalize())))
     d = daily.reindex(days)  # regular sessions only (drops Muhurat/special rows from the daily series)
     rng = d["high"] - d["low"]
     out = pd.DataFrame(index=days)
     out["compression"] = rng.shift(1) < 0.75 * rng.shift(2).rolling(20).median()
     out["low_iv"] = False
+    out["iv_high"] = False
     if opt is not None and not opt.empty:
         a = opt[(opt["slot"] == 0) & (opt["offset"] == 0) & (opt["iv"] > 0)].sort_values("ts")
         last = a.groupby([a["ts"].dt.tz_localize(None).dt.normalize(), "side"])["iv"].last().unstack()
         iv = last.mean(axis=1).reindex(days)
         q = iv.rolling(60, min_periods=60).quantile(0.33)
         out["low_iv"] = iv.shift(1) < q.shift(1)
+        q_hi = iv.rolling(60, min_periods=60).quantile(0.67)
+        out["iv_high"] = iv.shift(1) > q_hi.shift(1)
     return out.fillna(False).astype(bool)
 
 

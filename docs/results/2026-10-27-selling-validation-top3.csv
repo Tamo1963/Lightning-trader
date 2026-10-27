@@ -1,0 +1,4 @@
+variant,n,win,exp_r,ci90_lo,ci90_hi,pf,pnl,max_dd_pct,time_exits,worst_day_inr,exits,modelled_leg_share
+fly|1200|stop_tp|none,108,0.056,-0.4926,-0.5688,-0.4215,0.03,-128884,12.8,0.6,-10478,"{'TIME': 65, 'STOP': 43}",0.134
+condor|1200|time|none,113,0.018,-0.5233,-0.5806,-0.4666,0.003,-125480,12.5,1.0,-4972,{'TIME': 113},0.158
+fly|1200|time|none,98,0.031,-0.514,-0.5774,-0.4562,0.008,-110743,11.0,1.0,-3461,{'TIME': 98},0.154
