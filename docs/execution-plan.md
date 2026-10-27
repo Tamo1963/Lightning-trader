@@ -1,4 +1,4 @@
-# Execution Plan v0.2
+# Execution Plan v0.3
 
 Inputs: capital INR 10,00,000; max risk per trade 2% (INR 20,000); Jev access via an API key.
 Companion: `foundation-spec.md` (gates, protocol, acceptance criteria), `config/risk.defaults.yaml`.
@@ -100,9 +100,26 @@ Parallel from week 1: audit schema, config loader, secrets handling, kill-switch
 | Jev version change or provider outage | Revert to pinned version; re-run pre-flight tests |
 | Pilot drawdown beyond pre-set bound | Back to paper; post-mortem |
 
-## 8. Open items for you
+## 8. Decisions recorded (v0.3)
 
-1. Is your key from TypeSafe directly or the AI/ML API gateway? (Phase 0 uses it for the spike.)
-2. Dhan plan: does it include historical intraday and expired options data, and the API/static-IP setup?
-3. Which index first: Nifty only (simplest, deepest liquidity) or both? I recommend Nifty first.
-4. Preferred trading window and whether to trade expiry day (default: not).
+| Question | Answer | Consequence |
+|---|---|---|
+| Jev key source | TypeSafe directly | Use `typesafe-sdk` (pinned `0.7.5`); spike script `scripts/jev_spike.py`. Gateway not needed. |
+| Dhan data | Paid data plan | Phase 0 still confirms exactly what it covers (see checklist below). |
+| Scope | Nifty first, stocks included | See section 9. |
+| Expiry day | Default: no entries | `block_expiry_day_entries: true` |
+
+Phase 0 Dhan checklist: intraday history depth for index futures and stock futures; expired-options history (strikes, OI, IV);
+live option chain and market depth; websocket limits; token lifetime; static-IP and order-API requirements; rate limits.
+
+## 9. Including stocks
+
+Stocks are in scope but **not pooled with the index**. Reasons: stock options are monthly only, spreads are wider, lot sizes
+and liquidity vary widely, and single names have earnings, corporate actions and F&O ban periods that indices do not.
+
+- **Universe:** F&O stocks filtered by liquidity (option spread, OI, volume, futures turnover), starting from Nifty 50 constituents. List is config, reviewed monthly.
+- **Extra G1 checks for stocks:** earnings/board-meeting date within the holding window, F&O ban list, corporate action, circuit/price-band proximity, stock-vs-index relative strength as a label for Jev.
+- **Extra G5 checks:** stricter spread and OI limits, smaller outlay cap per stock (default 5% of capital), max 1 position per stock and at most 2 stock positions at once.
+- **Validation:** Nifty is the primary study. Stocks run as a separate study (own baseline A, own acceptance gates) and share only code. Cross-sectional pooling is allowed for the stats model only if per-stock results are consistent. More names gives more candidates, which helps the sample-size problem, but more variants also raises the false-discovery risk: all stock tests count toward the same multiple-testing budget and use the same frozen thresholds.
+- **Sequencing:** Nifty goes through Phases 2-5 first. Stock data ingestion and the universe filter are built in Phase 2 in parallel; stock shadow testing starts when the Nifty Jev pre-flight tests (Phase 4) pass, so Jev behaviour is understood before it scales.
+- Live trading on stocks is not enabled until the stock study passes its own Phase 5 gate.

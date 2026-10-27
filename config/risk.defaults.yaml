@@ -34,3 +34,12 @@ jev:
   on_error: reject                    # fail closed
   min_repeat_agreement: 0.95
   rotations: 3                        # per choice question, averaged in code
+stocks:                               # separate study; disabled for live until its own gate passes
+  enabled_for_shadow: false           # switch on after Nifty Phase 4 passes
+  universe_source: "nifty50_constituents_fno_liquid"
+  max_premium_outlay_pct: 5.0
+  max_positions_per_stock: 1
+  max_stock_positions: 2
+  block_if_earnings_within_days: 2    # [TUNE]
+  block_if_fno_ban: true
+  lot_size: "from_instrument_master"
