@@ -13,29 +13,14 @@ from lightning.calendar import ExpiryCalendar
 from lightning.config import load_params
 from lightning.data import store
 from lightning.features import build_features
-from lightning.metrics import summarize
 from lightning.pricing import RealPricer
+from lightning.report import row as _row, window
 
-IST = "Asia/Kolkata"
 HORIZONS = {"30m": 2, "60m": 4, "120m": 8, "EOD": 99}
 
 
-def window(trades, sp):
-    lo = pd.Timestamp(sp["from"]).tz_localize(IST)
-    hi = pd.Timestamp(sp["to"]).tz_localize(IST) + pd.Timedelta(days=1)
-    return trades[(trades["entry_ts"] >= lo) & (trades["entry_ts"] < hi)] if not trades.empty else trades
-
-
 def row(name, t, p):
-    s = summarize(t, p.capital)
-    if s["n_trades"] == 0:
-        return {"variant": name, "n": 0}
-    calls = int((t["side"] == 1).sum())
-    return {"variant": name, "n": s["n_trades"], "calls": calls, "puts": s["n_trades"] - calls,
-            "win": round(s["win_rate"], 3), "exp_r": round(s["expectancy_r"], 4),
-            "ci90_lo": round(s["expectancy_r_ci90"][0], 4), "ci90_hi": round(s["expectancy_r_ci90"][1], 4),
-            "pf": round(s["profit_factor"], 3), "pnl": round(s["total_pnl_inr"]), "max_dd_pct": round(s["max_drawdown_pct"], 1),
-            "time_exits": round(s["exit_reasons"].get("TIME", 0) / s["n_trades"], 2)}
+    return _row(name, t, p.capital)
 
 
 def main():

@@ -87,12 +87,12 @@ def simulate_trade(f: pd.DataFrame, i: int, side: int, equity: float, p: Params,
     return None, "NO_EXIT"  # unreachable: the last bar is always forced
 
 
-def run(f: pd.DataFrame, p: Params, pricer=None, cal: ExpiryCalendar | None = None):
+def run(f: pd.DataFrame, p: Params, pricer=None, cal: ExpiryCalendar | None = None, cands: pd.DataFrame | None = None):
     """Returns (trades, candidate_log). Every candidate is logged with TRADED or its rejection reason.
     Defaults: modelled premiums and an expiry calendar built from the data's own trading days."""
     pricer = pricer or ModelPricer(f, p.strike_step, p.iv)
     cal = cal or ExpiryCalendar(f.index.date, p.expiry_schedule)
-    cands = generate(f, p)
+    cands = generate(f, p) if cands is None else cands
     pos = {ts: k for k, ts in enumerate(f.index)}
     equity = peak = p.capital
     free_idx = -1
