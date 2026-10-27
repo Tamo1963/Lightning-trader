@@ -40,8 +40,11 @@ def parse_rolling(payload: dict, side: str) -> pd.DataFrame:
 
 
 class DhanClient:
-    def __init__(self, access_token: str, session: requests.Session | None = None, pause_s: float = 0.3):
+    def __init__(self, access_token: str, session: requests.Session | None = None, pause_s: float = 0.3,
+                 client_id: str | None = None):
         self._headers = {"access-token": access_token, "Content-Type": "application/json", "Accept": "application/json"}
+        if client_id:  # required by option-chain and market-quote endpoints
+            self._headers["client-id"] = str(client_id)
         self._s = session or requests.Session()
         self._pause = pause_s
         self.skipped = []  # windows Dhan reported as having no data (DH-907)
@@ -98,3 +101,12 @@ class DhanClient:
             time.sleep(self._pause)
         df = pd.concat([x for x in frames if not x.empty]) if any(not x.empty for x in frames) else pd.DataFrame(columns=ROLL_FIELDS)
         return df[~df.index.duplicated(keep="last")].sort_index()
+
+    # --- live market data (read-only; this client has no order methods by design) ---
+    def expiry_list(self, underlying_id: int, segment: str = "IDX_I") -> list[str]:
+        return self._post("/optionchain/expirylist", {"UnderlyingScrip": int(underlying_id), "UnderlyingSeg": segment})["data"]
+
+    def option_chain(self, underlying_id: int, expiry: str, segment: str = "IDX_I") -> dict:
+        """Returns {"last_price": float, "oc": {strike_str: {"ce": {...}, "pe": {...}}}} (Dhan rate limit: 1 per 3 s)."""
+        return self._post("/optionchain", {"UnderlyingScrip": int(underlying_id), "UnderlyingSeg": segment,
+                                           "Expiry": expiry})["data"]

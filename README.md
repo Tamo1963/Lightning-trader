@@ -34,3 +34,12 @@ Modules: `indicators`, `features`, `signals` (G1/G2), `calendar` (expiry and lot
 
 Still [VERIFY] on first fetch: which Dhan `expiryCode` is the near weekly contract (config `data.rolling_slots`),
 pre-2025 expiry weekday and lot sizes, and the charges in `config/costs.yaml`.
+
+## Shadow testing (live data, paper fills, no orders)
+
+See `docs/shadow.md`. `python scripts/run_shadow.py --live` (needs `DHAN_ACCESS_TOKEN`, `DHAN_CLIENT_ID`, optional
+`JEV_API_KEY`), dashboard `streamlit run app/dashboard.py`, offline check `--replay --from ... --to ...`.
+
+## Research status
+Four pre-registered strategy families (59 variants) failed validation; see `docs/results/`. The shadow strategies are
+forward-tracked hypotheses, not validated strategies.

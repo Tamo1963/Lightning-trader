@@ -1,0 +1,17 @@
+# Shadow testing: live data, gates, Jev and paper fills. NO ORDERS ARE EVER PLACED (no order code exists).
+underlying: {name: NIFTY, security_id: 13, segment: IDX_I}
+poll_seconds: 20          # intra-bar stop/target checks while paper positions are open (option chain limit: 1 req / 3 s)
+history_sessions: 10      # intraday sessions loaded at start-up for indicators
+stale_after_seconds: 120  # newest completed bar older than this (after it should exist) -> no new entries
+band_strikes: 3           # quotes stored for ATM +/- this many strikes each bar (spread measurement, volume proxy)
+strategies:               # forward-tracked hypotheses (all failed in backtests; shadow measures them forward)
+  A_baseline:      {entry_mode: edge,     htf_filter: full, horizon_bars: 2}
+  H_pullback_60m:  {entry_mode: pullback, htf_filter: full, horizon_bars: 4}
+jev:
+  enabled: true           # needs JEV_API_KEY; without it every call is logged as UNAVAILABLE (fail closed)
+  model: jev-1.13.0
+  timeout_seconds: 5
+  max_retries: 1
+  rule:                   # DRAFT thresholds, not fitted yet; shadow data is what they will be fitted on
+    max_stand_aside: 0.40
+    min_thesis: 0.50
