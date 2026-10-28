@@ -187,3 +187,16 @@ def test_aggregate_parses_typesafe_response_shape():
     agg = aggregate(raw, groups)
     assert agg["thesis_supported"]["probs"] == {"yes": 0.66}
     assert decide(agg, 1, CFG["jev"]["rule"]) == ("APPROVE", "OK")
+
+
+def test_real_jev_spike_response_parses():
+    """Regression: a real jev-1.13.0 response from the Phase 0 spike (2026-10-28)."""
+    import json
+    raw = json.loads((ROOT / "tests" / "fixtures" / "jev_spike_call0.json").read_text())
+    q, groups = rotated_questions()
+    agg = aggregate(raw, groups)
+    assert abs(agg["direction"]["probs"]["call_favorable"] - 0.99) < 1e-9
+    assert agg["direction"]["spread"] < 0.01 and agg["entry_quality"]["spread"] < 0.02
+    assert agg["thesis_supported"]["probs"]["yes"] == 0.91
+    assert decide(agg, 1, CFG["jev"]["rule"]) == ("APPROVE", "OK")
+    assert decide(agg, -1, CFG["jev"]["rule"])[0] == "REJECT"

@@ -1,0 +1,10 @@
+{"model": "jev-1.13.0", "usage": {"input_tokens": 1331, "output_tokens": 366},
+ "answers": {
+  "direction_0": {"type": "choice", "choice": "call_favorable", "confidence": 0.98, "probabilities": {"call_favorable": 0.99, "put_favorable": 0.0, "stand_aside": 0.01}},
+  "direction_1": {"type": "choice", "choice": "call_favorable", "confidence": 0.98, "probabilities": {"put_favorable": 0.0, "stand_aside": 0.01, "call_favorable": 0.99}},
+  "direction_2": {"type": "choice", "choice": "call_favorable", "confidence": 0.98, "probabilities": {"stand_aside": 0.01, "call_favorable": 0.99, "put_favorable": 0.0}},
+  "entry_quality_0": {"type": "choice", "choice": "good_entry", "confidence": 0.99, "probabilities": {"good_entry": 0.99, "extended": 0.01, "poor_location": 0.0, "unclear": 0.0}},
+  "entry_quality_1": {"type": "choice", "choice": "good_entry", "confidence": 0.97, "probabilities": {"extended": 0.01, "poor_location": 0.0, "unclear": 0.01, "good_entry": 0.98}},
+  "entry_quality_2": {"type": "choice", "choice": "good_entry", "confidence": 0.99, "probabilities": {"poor_location": 0.0, "unclear": 0.0, "good_entry": 0.99, "extended": 0.01}},
+  "entry_quality_3": {"type": "choice", "choice": "good_entry", "confidence": 1.0, "probabilities": {"unclear": 0.0, "good_entry": 1.0, "extended": 0.0, "poor_location": 0.0}},
+  "thesis_supported": {"type": "noul", "noul": 0.91}}}
