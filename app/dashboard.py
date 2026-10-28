@@ -31,6 +31,30 @@ def q(sql):
     return pd.read_sql_query(sql, con)
 
 
+tables = set(q("SELECT name FROM sqlite_master WHERE type='table'")["name"])
+if "cc_cycles" in tables:  # covered-call shadow database
+    st.header("Covered call (5% OTM) vs futures buy-and-hold")
+    cyc = q("SELECT * FROM cc_cycles ORDER BY d_in")
+    closed = cyc[cyc["status"] == "CLOSED"]
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Open positions", int((cyc["status"] == "OPEN").sum()))
+    c2.metric("Closed cycles", len(closed))
+    c3.metric("Net, buy-and-hold (INR)", f"{closed['net_b0_inr'].sum():,.0f}" if len(closed) else "-")
+    c4.metric("Net, covered call (INR)", f"{closed['net_c5_inr'].sum():,.0f}" if len(closed) else "-")
+    if len(closed):
+        eq = closed.groupby("d_out")[["net_b0_inr", "net_c5_inr"]].sum().cumsum()
+        st.subheader("Cumulative closed-cycle P&L (INR)"); st.line_chart(eq)
+        sp = closed.assign(call_spread_pct=100 * (closed["c_in_ask"] - closed["c_in_bid"]) / ((closed["c_in_ask"] + closed["c_in_bid"]) / 2),
+                           fut_spread_pct=100 * (closed["f_in_ask"] - closed["f_in_bid"]) / ((closed["f_in_ask"] + closed["f_in_bid"]) / 2))
+        st.subheader("Entry spreads, % of mid (backtest assumed calls 2%, futures 0.02% round trip)")
+        st.dataframe(sp.groupby("symbol")[["call_spread_pct", "fut_spread_pct"]].median().round(3), width="stretch")
+    st.subheader("Cycles"); st.dataframe(cyc, width="stretch")
+    marks = q("SELECT * FROM cc_marks ORDER BY day DESC LIMIT 200")
+    if len(marks):
+        st.subheader("Daily marks (open positions)"); st.dataframe(marks, width="stretch")
+    st.subheader("Log"); st.dataframe(q("SELECT * FROM cc_log ORDER BY ts DESC LIMIT 100"), width="stretch")
+    st.stop()
+
 hb = q("SELECT * FROM heartbeat ORDER BY ts DESC LIMIT 50")
 trades = q("SELECT * FROM paper_trades")
 cands = q("SELECT * FROM candidates")

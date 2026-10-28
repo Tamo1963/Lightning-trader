@@ -48,3 +48,19 @@ Example cron (Mon-Fri, server in IST): `5 9 * * 1-5 cd /path/lightning-trader &&
 2. **Jev tab:** error rate, latency, approval rate by direction (buy-bias check).
 3. **Paper trades:** A vs A+J on identical candidates; note that both strategies already failed backtests, so a
    positive forward result needs the same pre-registered evaluation before anything else.
+
+## Covered-call mode (daily)
+Tracks the sealed-test rule (long next-month stock futures + short call nearest 5% above, rolled on the last trading
+day before each monthly expiry) at real Dhan quotes: futures from `/marketfeed/quote`, calls from the stock option chain.
+Buys at the ask, sells at the bid; a far out-of-the-money call with no seller is bought back at intrinsic + 0.05 (logged).
+Both versions are recorded: futures-only buy-and-hold and covered call. Database: `data/shadow/covered_call.sqlite`.
+
+1. Put the Dhan scrip master CSV at `data/api-scrip-master.csv` (futures security ids; refresh monthly).
+2. Choose stocks in `config/shadow_cc.yaml` (default HDFCBANK, BHARTIARTL). Optionally list NSE holidays under `holidays:`.
+3. Once: `python scripts/probe_cc_shadow.py` to confirm the stock option-chain segment and futures quotes.
+4. Daily after 15:20 IST: `python scripts/run_cc_shadow.py --live` (Windows Task Scheduler or cron). Missing a roll day
+   marks that cycle `EXPIRED_UNTRACKED` (excluded) and starts a new one.
+5. Dashboard: `streamlit run app/dashboard.py`, select `covered_call.sqlite`.
+
+Offline check: `python scripts/run_cc_shadow.py --replay --from 2025-09-01 --to 2026-10-27` reproduces the sealed-test
+backtest for the configured stocks (13/13 cycles, same strikes, same returns to 4 decimals).

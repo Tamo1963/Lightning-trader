@@ -110,3 +110,7 @@ class DhanClient:
         """Returns {"last_price": float, "oc": {strike_str: {"ce": {...}, "pe": {...}}}} (Dhan rate limit: 1 per 3 s)."""
         return self._post("/optionchain", {"UnderlyingScrip": int(underlying_id), "UnderlyingSeg": segment,
                                            "Expiry": expiry})["data"]
+
+    def market_quote(self, instruments: dict) -> dict:
+        """{"NSE_FNO": [id, ...]} -> {"NSE_FNO": {"id": {...depth, last_price...}}} (needs client-id; 1 request / s)."""
+        return self._post("/marketfeed/quote", {k: [int(x) for x in v] for k, v in instruments.items()})["data"]

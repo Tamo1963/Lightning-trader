@@ -1,0 +1,7 @@
+# Covered-call shadow mode (daily). Paper only: NO ORDERS. Rules = the sealed-test C5 rule.
+symbols: [HDFCBANK, BHARTIARTL]    # start with stocks where C5 held up; any of the 13 qualifying names works
+otm: 0.05                          # call strike nearest futures x (1 + otm)
+run_after: "15:20"                 # IST; marks and rolls use quotes at this time
+min_days_to_open: 5                # first start mid-cycle only if the near expiry is at least this far away
+scrip_master: data/api-scrip-master.csv   # Dhan instrument file (futures security ids); refresh monthly
+option_chain_segment: NSE_EQ       # [VERIFY] UnderlyingSeg for stock option chains (probe: scripts/probe_cc_shadow.py)
