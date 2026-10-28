@@ -169,3 +169,21 @@ def test_api_key_name_fallback(monkeypatch):
     assert api_key() == "k2"
     monkeypatch.setenv("JEV_API_KEY", "k1")
     assert api_key() == "k1"
+
+
+def test_aggregate_parses_typesafe_response_shape():
+    """Shape per typesafe-sdk 0.7.5 SystemOneResponse: answers[name] = choice {choice, confidence, probabilities} or noul {noul}."""
+    q, groups = rotated_questions()
+    answers = {}
+    for k, spec in q.items():
+        if spec["type"] == "choice":
+            opts = list(spec["criteria"])
+            top = "call_favorable" if "call_favorable" in opts else "good_entry"
+            answers[k] = {"type": "choice", "choice": top, "confidence": 0.7,
+                          "probabilities": {o: (0.7 if o == top else 0.3 / (len(opts) - 1)) for o in opts}}
+        else:
+            answers[k] = {"type": "noul", "noul": 0.66}
+    raw = {"model": "jev-1.13.0", "answers": answers, "usage": {"input_tokens": 100, "output_tokens": 0}}
+    agg = aggregate(raw, groups)
+    assert agg["thesis_supported"]["probs"] == {"yes": 0.66}
+    assert decide(agg, 1, CFG["jev"]["rule"]) == ("APPROVE", "OK")

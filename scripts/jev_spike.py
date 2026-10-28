@@ -65,4 +65,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except Exception as e:  # short, key-free error for the user to report
+        sys.exit(f"Jev spike failed: {type(e).__name__}: {str(e)[:500]}")

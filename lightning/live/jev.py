@@ -79,6 +79,8 @@ def _find_probs(obj, key):
             for cand in ("probabilities", "probs", "distribution"):
                 if isinstance(v, dict) and isinstance(v.get(cand), dict):
                     return v[cand]
+            if isinstance(v, dict) and isinstance(v.get("noul"), (int, float)):  # TypeSafe noul answer
+                return {"yes": v["noul"]}
             if isinstance(v, dict) and isinstance(v.get("probability"), (int, float)):
                 return {"yes": v["probability"]}
             if isinstance(v, (int, float)):
