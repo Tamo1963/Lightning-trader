@@ -37,6 +37,7 @@ def window(t, w):
 
 
 def main():
+    clamp = "--clamp-spreads" in sys.argv  # sensitivity run, NOT the pre-registered test
     p = load_params()
     files = sorted((ROOT / "data" / "nse" / "nifty_monthly").glob("*.csv"))
     df = pd.concat([pd.read_csv(f, parse_dates=["date", "expiry"]) for f in files], ignore_index=True)
@@ -47,11 +48,11 @@ def main():
     res, trades = [], {}
     for st, en, sp in itertools.product(["fly", "condor_n", "condor_w"], ["early", "mid"], ["none", "stop10"]):
         name = f"{st}|{en}|{sp}"
-        t, log = simulate(chain, spot, MonthlyVariant(st, en, sp), p, p.capital)
+        t, log = simulate(chain, spot, MonthlyVariant(st, en, sp, clamp_spreads=clamp), p, p.capital)
         trades[name] = t
         res.append(stats(name, window(t, TRAIN)))
         print("train", res[-1], flush=True)
-    out = ROOT / "data" / "out" / "monthly_selling"; out.mkdir(parents=True, exist_ok=True)
+    out = ROOT / "data" / "out" / ("monthly_selling_clamped" if clamp else "monthly_selling"); out.mkdir(parents=True, exist_ok=True)
     for k, t in trades.items():
         t.to_csv(out / f"{k.replace('|', '_')}.csv", index=False)
     tr = pd.DataFrame(res).sort_values("mean_r", ascending=False)

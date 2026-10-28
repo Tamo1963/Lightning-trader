@@ -24,6 +24,7 @@ class MonthlyVariant:
     capital_employed_pct: float = 20.0
     slip_pct: float = 0.01
     min_slip: float = 0.5
+    clamp_spreads: bool = False  # sensitivity only: cap each vertical's mark to [0, its width] (stale-close guard)
 
 
 class Chain:
@@ -117,6 +118,10 @@ def simulate(chain: Chain, spot_close: pd.Series, v: MonthlyVariant, p, equity0:
                 cur.append(last_px[i])
             outs = [c + _slip(c, v) if sg > 0 else max(c - _slip(c, v), 0.0) for (_, _, sg), c in zip(legs, cur)]
             debit = sum(sg * x for (_, _, sg), x in zip(legs, outs))
+            if v.clamp_spreads:  # no-arbitrage bounds on each vertical's mid value, then the same exit slippage
+                call_v = min(max(cur[0] - cur[2], 0.0), wc - kc)
+                put_v = min(max(cur[1] - cur[3], 0.0), kp - wp)
+                debit = call_v + put_v + sum(_slip(c, v) for c in cur)
             costs = sum(round_trip_costs(qty, x_out, x_in, p.costs) if sg > 0 else round_trip_costs(qty, x_in, x_out, p.costs)
                         for (_, _, sg), x_in, x_out in zip(legs, fills, outs))
             pnl = (credit - debit) * qty - costs

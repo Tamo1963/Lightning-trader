@@ -69,3 +69,17 @@ def test_wing_falls_back_to_listed_strike(setup):
     assert ch.wing(date(2026, 1, 28), date(2026, 2, 24), "CE", 26100, +1) is None  # beyond listed range
     assert ch.wing(date(2026, 1, 28), date(2026, 2, 24), "PE", 23990, -1) is None
     assert ch.wing(date(2026, 1, 28), date(2026, 2, 24), "CE", 25425, +1) == 25450
+
+
+def test_clamp_caps_loss_near_max_loss(setup):
+    """With stale closes that break the spread width, clamped marks keep losses near -1R."""
+    ch0, spot, p = setup
+    days, ex = ch0.days, [date(2026, 1, 27), date(2026, 2, 24), date(2026, 3, 31)]
+    def stale(d, e, k, o):  # deep ITM short call priced far above its wing: call spread worth more than its width
+        base = decay(d, e, k, o, spot=25000 if d < date(2026, 2, 2) else 25800)
+        return base + (150 if (o == "CE" and k == 25100 and d >= date(2026, 2, 2)) else 0)
+    ch = Chain(chain_df(days, ex, stale))
+    s = pd.Series([25000.0 if d < date(2026, 2, 2) else 25800.0 for d in days], index=pd.DatetimeIndex([pd.Timestamp(d) for d in days]))
+    raw, _ = simulate(ch, s, MonthlyVariant("condor_n", "early", "none"), p, 1_000_000)
+    clamped, _ = simulate(ch, s, MonthlyVariant("condor_n", "early", "none", clamp_spreads=True), p, 1_000_000)
+    assert raw.iloc[0]["r"] < -1.1 and -1.1 < clamped.iloc[0]["r"] < 0

@@ -1,0 +1,4 @@
+variant,n,mean_r,ci90_lo,ci90_hi,target_hit,stop_hit,mean_r_missed,worst_inr,net_inr,max_dd_inr,median_days,zero_vol_share
+condor_w|mid|none,15,-0.1077,-0.3081,0.0559,0.733,0.0,-0.7069,-106728,-175536,239438,3.0,0.0
+condor_n|mid|none,15,-0.0791,-0.3142,0.135,0.733,0.0,-0.8365,-77385,-107463,170091,4.0,0.0
+condor_w|mid|stop10,15,-0.0678,-0.1624,0.0171,0.533,0.467,-0.2627,-45843,-86814,81773,2.0,0.0
