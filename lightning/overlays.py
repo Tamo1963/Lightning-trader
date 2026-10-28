@@ -24,6 +24,8 @@ def cycles_for(sym_df: pd.DataFrame):
     exps = sorted(set(fut["expiry"]))
     roll = {}
     for e in exps:
+        if e > days[-1]:  # expiry beyond the data: the cycle would be cut short
+            continue
         before = [d for d in days if d < e]
         if before:
             roll[e] = before[-1]

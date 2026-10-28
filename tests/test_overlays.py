@@ -53,3 +53,9 @@ def test_corporate_action_flag_and_perf():
     assert bool(run_symbol(split, 100, C).iloc[0]["corp_action"])
     p = perf(pd.Series([0.01, -0.02, 0.03, 0.0]))
     assert p["n"] == 4 and 0 < p["max_dd"] < 0.03
+
+
+def test_no_partial_cycle_at_data_end():
+    df = make(lambda i, n: 1000.0)
+    cut = df[df["date"] <= date(2026, 3, 20)]  # data ends before the March expiry
+    assert cycles_for(cut) == []

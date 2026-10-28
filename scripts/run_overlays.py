@@ -49,14 +49,17 @@ def main():
                 row[f"{s}_{v}_sharpe"] = round(pf[(s, v)].get("sharpe", np.nan), 3)
                 row[f"{s}_{v}_mdd"] = round(pf[(s, v)].get("max_dd", np.nan), 4)
         summary.append(row)
+        def m(split, var, key):  # missing metric (too few cycles) -> NaN, which fails every comparison
+            return pf[(split, var)].get(key, np.nan)
+
         for v in ("P3", "P5", "C3", "C5"):
             if v.startswith("C"):
                 yr_share = float(np.mean([perf(y[v]).get("sharpe", -9) > perf(y["B0"]).get("sharpe", -9) for _, y in years]))
-                ok = all(pf[(s, v)]["sharpe"] > pf[(s, "B0")]["sharpe"] for s in ("train", "val")) and yr_share >= 0.70
+                ok = all(m(s, v, "sharpe") > m(s, "B0", "sharpe") for s in ("train", "val")) and yr_share >= 0.70
                 extra = {"train_years_better": round(yr_share, 2)}
             else:
-                ok = all(pf[(s, v)]["max_dd"] <= 0.7 * pf[(s, "B0")]["max_dd"] and
-                         pf[(s, "B0")]["ann_ret"] - pf[(s, v)]["ann_ret"] <= 0.03 for s in ("train", "val"))
+                ok = all(m(s, v, "max_dd") <= 0.7 * m(s, "B0", "max_dd") and
+                         m(s, "B0", "ann_ret") - m(s, v, "ann_ret") <= 0.03 for s in ("train", "val"))
                 extra = {}
             verdicts.append({"symbol": sym, "overlay": v, "qualifies": qualifies, "worth_it": bool(ok), **extra})
     S, V = pd.DataFrame(summary), pd.DataFrame(verdicts)
